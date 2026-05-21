@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Parts Scanner</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0f1117;--s1:#181c27;--s2:#1e2333;--bd:#2a3048;
+  --acc:#f0b429;--blue:#3b82f6;--green:#22c55e;--red:#ef4444;
+  --txt:#e8ecf4;--mut:#6b7898;
+}
+html,body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,sans-serif;font-size:16px;overflow-x:hidden}
+.app{max-width:480px;margin:0 auto;padding:16px;padding-bottom:40px}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--bd)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-ic{width:34px;height:34px;background:var(--acc);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-name{font-size:16px;font-weight:700;font-family:monospace}
+.logo-name b{color:var(--acc)}
+.hdr-date{font-size:11px;color:var(--mut);font-family:monospace;text-align:right}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px}
+.card-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--acc);margin-bottom:12px;font-family:monospace}
+.toggle-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.toggle-btn{padding:14px;border-radius:10px;border:1.5px solid var(--bd);background:var(--s2);color:var(--mut);font-size:15px;font-weight:600;cursor:pointer;text-align:center;transition:.15s;-webkit-appearance:none}
+.toggle-btn.out.active{border-color:var(--red);background:rgba(239,68,68,0.12);color:var(--red)}
+.toggle-btn.in.active{border-color:var(--green);background:rgba(34,197,94,0.12);color:var(--green)}
+.fld{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.fld:last-child{margin-bottom:0}
+.fld label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--mut);font-family:monospace}
+.fld input,.fld select,.fld textarea{background:var(--s2);border:1.5px solid var(--bd);border-radius:10px;color:var(--txt);padding:13px 14px;font-size:16px;font-family:system-ui,-apple-system,sans-serif;outline:none;width:100%;-webkit-appearance:none;transition:border-color .15s}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--acc)}
+.fld textarea{min-height:72px;resize:none}
+.scan-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.scan-btn{padding:13px 10px;border-radius:10px;border:1.5px dashed var(--blue);background:rgba(59,130,246,0.08);color:var(--blue);font-size:13px;font-weight:600;cursor:pointer;text-align:center;-webkit-appearance:none;transition:.15s}
+.scan-btn:active{background:rgba(59,130,246,0.18)}
+.submit-btn{width:100%;padding:18px;border-radius:14px;border:none;background:var(--acc);color:#0f1117;font-size:17px;font-weight:700;cursor:pointer;margin-top:6px;-webkit-appearance:none;transition:.15s}
+.submit-btn:active{opacity:0.85}
+
+/* Scanner overlay */
+.scanner-ov{display:none;position:fixed;inset:0;background:#000;z-index:1000;flex-direction:column;align-items:center;padding:20px}
+.scanner-ov.show{display:flex}
+.scanner-title{color:var(--acc);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-family:monospace;margin-bottom:14px;margin-top:10px}
+#qr-reader{width:100%;max-width:400px;border-radius:12px;overflow:hidden}
+#qr-reader video{border-radius:12px}
+.scanner-hint{color:var(--mut);font-size:13px;margin-top:12px;text-align:center;font-family:monospace}
+.scanner-cancel{margin-top:20px;padding:14px 40px;border-radius:12px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:600;cursor:pointer;-webkit-appearance:none}
+
+/* Success */
+.success{display:none;text-align:center;padding:40px 10px}
+.success-ic{font-size:56px;margin-bottom:12px}
+.success h2{font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px}
+.success p{font-size:14px;color:var(--mut);margin-bottom:20px;line-height:1.6}
+.success-detail{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:14px;text-align:left;margin-bottom:20px;font-family:monospace;font-size:12px;line-height:2.1}
+.success-detail span{color:var(--acc)}
+.new-btn{width:100%;padding:16px;border-radius:12px;border:1px solid var(--bd);background:var(--s2);color:var(--txt);font-size:16px;font-weight:600;cursor:pointer;-webkit-appearance:none}
+
+/* Recent */
+.recent-item{background:var(--s2);border-radius:10px;padding:11px 13px;margin-bottom:8px;border-left:3px solid var(--bd)}
+.recent-item.out{border-left-color:var(--red)}
+.recent-item.in{border-left-color:var(--green)}
+.recent-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.recent-part{font-family:monospace;font-size:12px;font-weight:700}
+.recent-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;font-family:monospace}
+.recent-badge.out{background:rgba(239,68,68,0.15);color:var(--red)}
+.recent-badge.in{background:rgba(34,197,94,0.15);color:var(--green)}
+.recent-sub{font-size:11px;color:var(--mut);font-family:monospace}
+.empty-recent{text-align:center;padding:16px;color:var(--mut);font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="hdr">
+    <div class="logo">
+      <div class="logo-ic">📦</div>
+      <div class="logo-name">Parts<b>Scanner</b></div>
+    </div>
+    <div class="hdr-date" id="hdr-date"></div>
+  </div>
+
+  <!-- Form -->
+  <div id="form-view">
+    <div class="card">
+      <div class="card-title">Movement</div>
+      <div class="toggle-row">
+        <button class="toggle-btn out active" id="btn-out" onclick="setMov('out')">📤 Out</button>
+        <button class="toggle-btn in" id="btn-in" onclick="setMov('in')">📥 In</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Part details</div>
+      <div class="scan-row">
+        <button class="scan-btn" onclick="openScanner('serial')">📷 Scan Serial</button>
+        <button class="scan-btn" onclick="openScanner('sku')">📷 Scan Part #</button>
+      </div>
+      <div class="fld">
+        <label>Serial # (if available)</label>
+        <input type="text" id="f-serial" placeholder="Scan or type serial #" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+      </div>
+      <div class="fld">
+        <label>Part # / SKU</label>
+        <input type="text" id="f-sku" placeholder="e.g. MMA4Z00-NS" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+      </div>
+      <div class="fld">
+        <label>Quantity</label>
+        <input type="number" id="f-qty" value="1" min="1" inputmode="numeric">
+      </div>
+      <div class="fld">
+        <label>Bin location</label>
+        <input type="text" id="f-bin" placeholder="e.g. US-LNB01_RMA_Pending" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Tech info</div>
+      <div class="fld">
+        <label>Your name</label>
+        <input type="text" id="f-name" placeholder="First Last" autocomplete="name" autocapitalize="words">
+      </div>
+      <div class="fld">
+        <label>Notes (optional)</label>
+        <textarea id="f-notes" placeholder="Any additional details…"></textarea>
+      </div>
+    </div>
+
+    <button class="submit-btn" onclick="submitRecord()">📧 Send Record</button>
+  </div>
+
+  <!-- Success -->
+  <div class="success" id="success-view">
+    <div class="success-ic">✅</div>
+    <h2>Record sent!</h2>
+    <p>Your inventory record has been emailed to the ops team.</p>
+    <div class="success-detail" id="success-detail"></div>
+    <button class="new-btn" onclick="resetForm()">＋ New scan</button>
+  </div>
+
+  <!-- Recent scans -->
+  <div class="card" style="margin-top:6px" id="recent-card">
+    <div class="card-title">Recent scans</div>
+    <div id="recent-list"><div class="empty-recent">No scans yet</div></div>
+  </div>
+
+</div>
+
+<!-- Scanner overlay -->
+<div class="scanner-ov" id="scanner-ov">
+  <div class="scanner-title" id="scanner-title">Scanning Serial #</div>
+  <div id="qr-reader"></div>
+  <div class="scanner-hint">Point camera at QR code or barcode</div>
+  <button class="scanner-cancel" onclick="closeScanner()">✕ Cancel</button>
+</div>
+
+<script>
+const RECIPIENT = 'jsnelling@coreweave.com';
+let movement = 'out';
+let recentScans = [];
+let html5QrCode = null;
+let scanTarget = 'serial';
+
+// Set date
+const now = new Date();
+document.getElementById('hdr-date').textContent = now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+// Restore name
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('ps_name');
+  if(saved) document.getElementById('f-name').value = saved;
+});
+
+function setMov(type) {
+  movement = type;
+  document.getElementById('btn-out').classList.toggle('active', type==='out');
+  document.getElementById('btn-in').classList.toggle('active', type==='in');
+}
+
+function openScanner(field) {
+  scanTarget = field;
+  document.getElementById('scanner-title').textContent = field === 'serial' ? 'Scanning Serial #' : 'Scanning Part #';
+  document.getElementById('scanner-ov').classList.add('show');
+
+  const config = {
+    fps: 10,
+    qrbox: { width: 250, height: 250 },
+    rememberLastUsedCamera: true,
+    supportedScanTypes: [
+      Html5QrcodeScanType.SCAN_TYPE_CAMERA
+    ]
+  };
+
+  html5QrCode = new Html5Qrcode('qr-reader');
+  Html5Qrcode.getCameras().then(cameras => {
+    if(!cameras || cameras.length === 0) {
+      alert('No camera found. Please allow camera access.');
+      closeScanner();
+      return;
+    }
+    // Use back camera on iPhone
+    const backCam = cameras.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('rear') || c.label.toLowerCase().includes('environment')) || cameras[cameras.length - 1];
+    html5QrCode.start(
+      backCam.id,
+      config,
+      (decodedText) => {
+        // Success
+        document.getElementById(scanTarget === 'serial' ? 'f-serial' : 'f-sku').value = decodedText;
+        closeScanner();
+        if(navigator.vibrate) navigator.vibrate(100);
+      },
+      (error) => { /* scanning */ }
+    ).catch(err => {
+      alert('Camera error: ' + err);
+      closeScanner();
+    });
+  }).catch(err => {
+    alert('Camera access denied. Please allow camera in Safari Settings.');
+    closeScanner();
+  });
+}
+
+function closeScanner() {
+  if(html5QrCode) {
+    html5QrCode.stop().catch(()=>{}).finally(() => {
+      html5QrCode.clear();
+      html5QrCode = null;
+      document.getElementById('qr-reader').innerHTML = '';
+    });
+  }
+  document.getElementById('scanner-ov').classList.remove('show');
+}
+
+function submitRecord() {
+  const serial = document.getElementById('f-serial').value.trim();
+  const sku = document.getElementById('f-sku').value.trim();
+  const qty = document.getElementById('f-qty').value;
+  const bin = document.getElementById('f-bin').value.trim();
+  const name = document.getElementById('f-name').value.trim();
+  const notes = document.getElementById('f-notes').value.trim();
+  const ts = new Date();
+  const dateStr = ts.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  const timeStr = ts.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+
+  if(!name){ alert('Please enter your name.'); document.getElementById('f-name').focus(); return; }
+  if(!sku && !serial){ alert('Please enter a Part # or Serial #.'); document.getElementById('f-sku').focus(); return; }
+
+  localStorage.setItem('ps_name', name);
+
+  const movLabel = movement === 'out' ? 'OUT' : 'IN';
+  const subject = `Parts ${movLabel} — ${sku||serial} — ${name} — ${dateStr}`;
+  const body = `INVENTORY RECORD\n${'='.repeat(38)}\nMovement:    ${movLabel}\nDate:        ${dateStr} at ${timeStr}\nTech:        ${name}\n\nPART DETAILS\n${'─'.repeat(38)}\nPart # / SKU:  ${sku||'—'}\nSerial #:      ${serial||'—'}\nQuantity:      ${qty}\nBin:           ${bin||'—'}\n\nNOTES\n${'─'.repeat(38)}\n${notes||'None'}\n${'='.repeat(38)}\nSent from CoreWeave Parts Scanner`;
+
+  window.location.href = `mailto:${RECIPIENT}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  recentScans.unshift({movement, sku:sku||serial, serial, qty, bin, name, time:timeStr});
+  renderRecent();
+
+  document.getElementById('success-detail').innerHTML =
+    `<span>Movement</span>  ${movLabel}<br><span>Part #</span>    ${sku||'—'}<br><span>Serial #</span>  ${serial||'—'}<br><span>Qty</span>       ${qty}<br><span>Bin</span>       ${bin||'—'}<br><span>Tech</span>      ${name}<br><span>Time</span>      ${timeStr}`;
+  document.getElementById('form-view').style.display='none';
+  document.getElementById('success-view').style.display='block';
+  window.scrollTo(0,0);
+}
+
+function resetForm() {
+  document.getElementById('f-serial').value='';
+  document.getElementById('f-sku').value='';
+  document.getElementById('f-qty').value='1';
+  document.getElementById('f-bin').value='';
+  document.getElementById('f-notes').value='';
+  setMov('out');
+  document.getElementById('form-view').style.display='block';
+  document.getElementById('success-view').style.display='none';
+  window.scrollTo(0,0);
+}
+
+function renderRecent() {
+  const el = document.getElementById('recent-list');
+  if(!recentScans.length){el.innerHTML='<div class="empty-recent">No scans yet</div>';return;}
+  el.innerHTML = recentScans.slice(0,5).map(s=>`
+    <div class="recent-item ${s.movement}">
+      <div class="recent-top">
+        <span class="recent-part">${s.sku||'—'}</span>
+        <span class="recent-badge ${s.movement}">${s.movement.toUpperCase()} ×${s.qty}</span>
+      </div>
+      <div class="recent-sub">${s.serial?'SN:'+s.serial+' · ':''}${s.name} · ${s.time}</div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
